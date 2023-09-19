@@ -95,7 +95,7 @@ if (filter_var($ipv6, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
 # https://ipv64.net/update.php?key=<token>&domain=<domain>&ip=<ipaddr>&ip6=<ip6addr>&output=min
 
 # $url = 'https://' . $account . ':' . $pwd   . '@dyndns.strato.com/nic/update?hostname=' . $hostname . '&myip=';
-$url = 'https://ipv64.net/nic/update?output=min&key=' . $pwd . '&domain=' . $hostname . '&ip='; 
+$url = 'https://ipv64.net/nic/update?key=' . $pwd . '&domain=' . $hostname . '&ip='; 
 $unchanged=true;
 $myips = $ip;
 if($ipv6 != '') { # IPv4 and IPv6 available
@@ -115,7 +115,7 @@ if (! str_contains($lastLogLine, $ip) ) {
   # $msg .= "  new IPv4 $ip, not found in '$lastLogLine'\n";
 }
 if ( ($age_h > $ageMin_h) || (! $unchanged ) )  {
-  # Send now the actual IPs to the DDNS provider Strato:
+  # Send now the actual IPs to the DDNS provider:
   $req = curl_init();
   curl_setopt($req, CURLOPT_URL, $url);
   curl_setopt($req,CURLOPT_RETURNTRANSFER,1); # https://stackoverflow.com/questions/6516902/how-to-get-response-using-curl-in-php
@@ -133,6 +133,9 @@ if ( ($age_h > $ageMin_h) || (! $unchanged ) )  {
   $res = curl_exec($req);
   curl_close($req);
   $msg .= "  curl_exec result: $res";
+  if (str_contains($res,"nochg") || str_contains($res,"good")) {
+    $msg .= " $ip $ipv6";
+  }
 } else {
   $msg .= "  sending skipped as last update was only $age_h h ago to avoid 'abuse ...' message\n";
   $msg .= "  returned result: $res";
@@ -152,7 +155,7 @@ if ( ($age_h > $ageMin_h) || (! $unchanged ) )  {
 
 echo("$res"); # The script output needs to start(!!) with "nochg" or "good" to avoid error messages in the synology protocol list.
 if ( (strpos($res, "good") !== 0) && (strpos($res, "nochg") !== 0)) { 
-  syslog(LOG_ERR, "$argv[0]: $res, see /tmp/ddns.log");
+  syslog(LOG_ERR, "$argv[0]: $res, see $LOG_NAME");
 }
 fwrite($fLOG, "$msg");
 fclose($fLOG);
